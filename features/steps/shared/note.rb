@@ -81,7 +81,7 @@ module SharedNote
 
   Then 'I should see the comment edit button' do
     within(".js-main-target-form") do
-      page.should have_css(".js-note-edit-button", visible: true)
+      page.should have_css(".js-note-write-button", visible: true)
     end
   end
 
@@ -100,6 +100,23 @@ module SharedNote
   Then 'I should see comment "XML attached"' do
     within(".note") do
       page.should have_content("XML attached")
+    end
+  end
+
+  # Markdown
+
+  step 'I leave a comment with a header containing "Comment with a header"' do
+    within(".js-main-target-form") do
+      fill_in "note[note]", with: "# Comment with a header"
+      click_button "Add Comment"
+      sleep 0.05
+    end
+  end
+
+  step 'The comment with the header should not have an ID' do
+    within(".note-text") do
+      page.should     have_content("Comment with a header")
+      page.should_not have_css("#comment-with-a-header")
     end
   end
 end

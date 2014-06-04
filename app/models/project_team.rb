@@ -22,22 +22,22 @@ class ProjectTeam
   end
 
   def find(user_id)
-    user = project.users.find_by_id(user_id)
+    user = project.users.find_by(id: user_id)
 
     if group
-      user ||= group.users.find_by_id(user_id)
+      user ||= group.users.find_by(id: user_id)
     end
 
     user
   end
 
   def find_tm(user_id)
-    tm = project.users_projects.find_by_user_id(user_id)
+    tm = project.users_projects.find_by(user_id: user_id)
 
     # If user is not in project members
     # we should check for group membership
     if group && !tm
-      tm = group.users_groups.find_by_user_id(user_id)
+      tm = group.users_groups.find_by(user_id: user_id)
     end
 
     tm
@@ -64,6 +64,10 @@ class ProjectTeam
     UsersProject.truncate_team(project)
   end
 
+  def users
+    members
+  end
+
   def members
     @members ||= fetch_members
   end
@@ -87,9 +91,8 @@ class ProjectTeam
   def import(source_project)
     target_project = project
 
-    source_team = source_project.users_projects.all
-    target_team = target_project.users_projects.all
-    target_user_ids = target_team.map(&:user_id)
+    source_team = source_project.users_projects.to_a
+    target_user_ids = target_project.users_projects.pluck(:user_id)
 
     source_team.reject! do |tm|
       # Skip if user already present in team
@@ -114,6 +117,22 @@ class ProjectTeam
     false
   end
 
+  def guest?(user)
+    find_tm(user.id).try(:access_field) == Gitlab::Access::GUEST
+  end
+
+  def reporter?(user)
+    find_tm(user.id).try(:access_field) == Gitlab::Access::REPORTER
+  end
+
+  def developer?(user)
+    find_tm(user.id).try(:access_field) == Gitlab::Access::DEVELOPER
+  end
+
+  def master?(user)
+    find_tm(user.id).try(:access_field) == Gitlab::Access::MASTER
+  end
+
   private
 
   def fetch_members(level = nil)
@@ -125,7 +144,10 @@ class ProjectTeam
       group_members = group_members.send(level) if group
     end
 
-    (project_members + group_members).map(&:user).uniq
+    user_ids = project_members.pluck(:user_id)
+    user_ids += group_members.pluck(:user_id) if group
+
+    User.where(id: user_ids)
   end
 
   def group

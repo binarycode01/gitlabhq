@@ -14,24 +14,27 @@ class SnippetsController < ApplicationController
   layout 'navless'
 
   def index
-    @snippets = Snippet.public.fresh.non_expired.page(params[:page]).per(20)
+    @snippets = Snippet.are_public.fresh.non_expired.page(params[:page]).per(20)
   end
 
   def user_index
-    @user = User.find_by_username(params[:username])
+    @user = User.find_by(username: params[:username])
+
+    render_404 and return unless @user
+
     @snippets = @user.snippets.fresh.non_expired
 
     if @user == current_user
       @snippets = case params[:scope]
-                  when 'public' then
-                    @snippets.public
-                  when 'private' then
-                    @snippets.private
+                  when 'are_public' then
+                    @snippets.are_public
+                  when 'are_private' then
+                    @snippets.are_private
                   else
                     @snippets
                   end
     else
-      @snippets = @snippets.public
+      @snippets = @snippets.are_public
     end
 
     @snippets = @snippets.page(params[:page]).per(20)

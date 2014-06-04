@@ -1,7 +1,7 @@
 require 'spec_helper'
 
-describe "Public Project Access" do
-  let(:project) { create(:project_with_code) }
+describe "Public Project Access", feature: true  do
+  let(:project) { create(:project) }
 
   let(:master) { create(:user) }
   let(:guest) { create(:user) }
@@ -9,7 +9,7 @@ describe "Public Project Access" do
 
   before do
     # public project
-    project.public = true
+    project.visibility_level = Gitlab::VisibilityLevel::PUBLIC
     project.save!
 
     # full access
@@ -193,17 +193,6 @@ describe "Public Project Access" do
     it { should be_denied_for guest }
     it { should be_denied_for :user }
     it { should be_denied_for :visitor }
-  end
-
-  describe "GET /:project_path/branches/recent" do
-    subject { recent_project_branches_path(project) }
-
-    it { should be_allowed_for master }
-    it { should be_allowed_for reporter }
-    it { should be_allowed_for :admin }
-    it { should be_allowed_for guest }
-    it { should be_allowed_for :user }
-    it { should be_allowed_for :visitor }
   end
 
   describe "GET /:project_path/branches" do

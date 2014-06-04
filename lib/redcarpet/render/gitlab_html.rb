@@ -6,16 +6,11 @@ class Redcarpet::Render::GitlabHTML < Redcarpet::Render::HTML
   def initialize(template, options = {})
     @template = template
     @project = @template.instance_variable_get("@project")
-    @ref = @template.instance_variable_get("@ref")
-    @request_path = @template.instance_variable_get("@path")
+    @options = options.dup
     super options
   end
 
   def block_code(code, language)
-    options = { options: {encoding: 'utf-8'} }
-    lexer = Pygments::Lexer.find(language) # language can be an alias
-    options.merge!(lexer: lexer.aliases[0].downcase) if lexer # downcase is required
-
     # New lines are placed to fix an rendering issue
     # with code wrapped inside <h1> tag for next case:
     #
@@ -25,7 +20,11 @@ class Redcarpet::Render::GitlabHTML < Redcarpet::Render::HTML
     #
     <<-HTML
 
-       <div class="#{h.user_color_scheme_class}">#{Pygments.highlight(code, options)}</div>
+<div class="highlighted-data #{h.user_color_scheme_class}">
+  <div class="highlight">
+    <pre><code class="#{language}">#{h.send(:html_escape, code)}</code></pre>
+  </div>
+</div>
 
     HTML
   end
@@ -34,19 +33,20 @@ class Redcarpet::Render::GitlabHTML < Redcarpet::Render::HTML
     h.link_to_gfm(content, link, title: title)
   end
 
-  def preprocess(full_document)
-    if @project
-      h.create_relative_links(full_document, @project.path_with_namespace, @ref, @request_path, is_wiki?)
+  def header(text, level)
+    if @options[:no_header_anchors]
+      "<h#{level}>#{text}</h#{level}>"
     else
-      full_document
+      id = ActionController::Base.helpers.strip_tags(h.gfm(text)).downcase() \
+          .gsub(/[^a-z0-9_-]/, '-').gsub(/-+/, '-').gsub(/^-/, '').gsub(/-$/, '')
+      "<h#{level} id=\"#{id}\">#{text}<a href=\"\##{id}\"></a></h#{level}>"
     end
   end
 
   def postprocess(full_document)
+    unless @template.instance_variable_get("@project_wiki") || @project.nil?
+      full_document = h.create_relative_links(full_document)
+    end
     h.gfm(full_document)
-  end
-
-  def is_wiki?
-    @template.instance_variable_get("@wiki")
   end
 end

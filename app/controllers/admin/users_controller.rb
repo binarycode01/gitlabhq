@@ -2,14 +2,14 @@ class Admin::UsersController < Admin::ApplicationController
   before_filter :user, only: [:show, :edit, :update, :destroy]
 
   def index
-    @users = User.scoped
-    @users = @users.filter(params[:filter])
+    @users = User.filter(params[:filter])
     @users = @users.search(params[:name]) if params[:name].present?
     @users = @users.alphabetically.page(params[:page])
   end
 
   def show
-    @projects = user.authorized_projects
+    @personal_projects = user.personal_projects
+    @joined_projects = user.projects.joined(@user)
   end
 
   def new
@@ -47,7 +47,8 @@ class Admin::UsersController < Admin::ApplicationController
     @user = User.build_user(params[:user].merge(opts), as: :admin)
     @user.admin = (admin && admin.to_i > 0)
     @user.created_by_id = current_user.id
-    @user.confirm!
+    @user.generate_password
+    @user.skip_confirmation!
 
     respond_to do |format|
       if @user.save
@@ -68,7 +69,9 @@ class Admin::UsersController < Admin::ApplicationController
       params[:user].delete(:password_confirmation)
     end
 
-    user.admin = (admin && admin.to_i > 0)
+    if admin.present?
+      user.admin = !admin.to_i.zero?
+    end
 
     respond_to do |format|
       if user.update_attributes(params[:user], as: :admin)
@@ -100,6 +103,6 @@ class Admin::UsersController < Admin::ApplicationController
   protected
 
   def user
-    @user ||= User.find_by_username!(params[:id])
+    @user ||= User.find_by!(username: params[:id])
   end
 end

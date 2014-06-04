@@ -1,12 +1,11 @@
 require 'spec_helper'
 
 describe Projects::CommitsController do
-  let(:project) { create(:project_with_code) }
+  let(:project) { create(:project) }
   let(:user) { create(:user) }
 
   before do
     sign_in(user)
-
     project.team << [user, :master]
   end
 

@@ -2,13 +2,17 @@
 #
 # Table name: web_hooks
 #
-#  id         :integer          not null, primary key
-#  url        :string(255)
-#  project_id :integer
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
-#  type       :string(255)      default("ProjectHook")
-#  service_id :integer
+#  id                    :integer          not null, primary key
+#  url                   :string(255)
+#  project_id            :integer
+#  created_at            :datetime
+#  updated_at            :datetime
+#  type                  :string(255)      default("ProjectHook")
+#  service_id            :integer
+#  push_events           :boolean          default(TRUE), not null
+#  issues_events         :boolean          default(FALSE), not null
+#  merge_requests_events :boolean          default(FALSE), not null
+#  tag_push_events       :boolean          default(FALSE)
 #
 
 require "spec_helper"
@@ -55,7 +59,7 @@ describe SystemHook do
       user = create(:user)
       project = create(:project)
       project.team << [user, :master]
-      project.users_projects.clear
+      project.users_projects.destroy_all
       WebMock.should have_requested(:post, @system_hook.url).with(body: /user_remove_from_team/).once
     end
   end
